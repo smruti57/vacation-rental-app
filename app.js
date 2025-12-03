@@ -157,6 +157,11 @@ async function startApp() {
     next();
   });
 
+  // Home page redirect
+  app.get('/', (req, res) => {
+    res.redirect('/listings');
+  });
+
   // Register routes after session/passport setup
   app.use('/listings', listingRouter);
   app.use('/listings/:id/reviews', reviewRouter);
