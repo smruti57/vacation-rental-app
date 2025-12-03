@@ -50,6 +50,12 @@ module.exports.renderEditForm = async(req,res,next)=>{
 
 module.exports.createListing = async(req,res,next)=>{
     try {
+        // Check if file was uploaded
+        if (!req.file) {
+            req.flash("error", "Please upload an image!");
+            return res.redirect("/listings/new");
+        }
+
         const address = req.body.listing.location;
         const response = await axios.get(`https://api.tomtom.com/search/2/geocode/${encodeURIComponent(address)}.json`, {
             params: {
@@ -57,6 +63,12 @@ module.exports.createListing = async(req,res,next)=>{
                 limit: 1
             }
         });
+        
+        if (!response.data.results || response.data.results.length === 0) {
+            req.flash("error", "Location not found. Please enter a valid location!");
+            return res.redirect("/listings/new");
+        }
+
         const position = response.data.results[0].position;
         const geojsonPoint = {
          type: "Point",
@@ -74,8 +86,9 @@ module.exports.createListing = async(req,res,next)=>{
         req.flash("success","New Listing Created!");
         res.redirect("/listings");
     } catch (err) {
-        console.error("Geocoding error:", err);
-        next(err);
+        console.error("Error creating listing:", err);
+        req.flash("error", `Error: ${err.message}`);
+        res.redirect("/listings/new");
     }
 };
 
