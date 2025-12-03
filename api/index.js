@@ -18,19 +18,36 @@ const handler = async (req, res) => {
   if (!appStarted) {
     if (!appStartPromise) {
       appStartPromise = (async () => {
-        try {
-          await startApp();
-          appStarted = true;
-        } catch (err) {
-          console.error('Failed to start app:', err);
-          throw err;
+        let retries = 0;
+        const maxRetries = 3;
+        
+        while (retries < maxRetries) {
+          try {
+            await startApp();
+            appStarted = true;
+            console.log('✓ App started successfully');
+            return;
+          } catch (err) {
+            retries++;
+            console.error(`Attempt ${retries} failed:`, err.message);
+            if (retries < maxRetries) {
+              console.log(`Retrying in 2 seconds...`);
+              await new Promise(resolve => setTimeout(resolve, 2000));
+            } else {
+              throw err;
+            }
+          }
         }
       })();
     }
     try {
       await appStartPromise;
     } catch (err) {
-      return res.status(500).json({ error: 'Failed to initialize application', details: err.message });
+      console.error('Failed to start app after retries:', err);
+      return res.status(500).json({ 
+        error: 'Failed to initialize application', 
+        details: err.message 
+      });
     }
   }
 

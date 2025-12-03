@@ -52,8 +52,10 @@ async function startApp() {
     
     console.log('Attempting to connect to MongoDB...');
     await mongoose.connect(dbUrl, {
-      serverSelectionTimeoutMS: 5000,
-      socketTimeoutMS: 5000,
+      serverSelectionTimeoutMS: 10000,
+      socketTimeoutMS: 10000,
+      maxPoolSize: 1,
+      retryWrites: true,
     });
     connected = true;
     console.log("✓ connected to Atlas MongoDB");
