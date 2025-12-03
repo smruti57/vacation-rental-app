@@ -101,14 +101,20 @@ async function startApp() {
   const sessionOptions = {
     secret: process.env.SESSION_SECRET || 'thisshouldbechanged',
     resave: false,
-    saveUninitialized: true,
+    saveUninitialized: false,
     cookie: {
       expires: Date.now() + 7 * 24 * 60 * 60 * 1000,
       maxAge: 7 * 24 * 60 * 60 * 1000,
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production'
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax'
     }
   };
+
+  // For production on Render, we need to trust proxy
+  if (process.env.NODE_ENV === 'production') {
+    app.set('trust proxy', 1);
+  }
 
   if (connected) {
     try {
