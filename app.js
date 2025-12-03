@@ -63,23 +63,24 @@ async function startApp() {
     console.error("✗ Failed to connect to MongoDB:", err && err.message ? err.message : err);
     
     if (process.env.NODE_ENV === 'production') {
-      console.error('❌ PRODUCTION ERROR: Cannot connect to Atlas MongoDB');
-      console.error('Error details:', err.message);
-      console.error('Check: 1) ATLAS_URL is correct, 2) MongoDB cluster allows Vercel IP, 3) IP whitelist is 0.0.0.0/0');
-      throw err;
-    }
-    
-    // Fallback: use in-memory MongoDB for development
-    console.warn('\n📦 Starting in-memory MongoDB for local development...');
-    try {
-      mongoServer = await MongoMemoryServer.create();
-      mongoUrl = mongoServer.getUri();
-      await mongoose.connect(mongoUrl);
-      connected = true;
-      console.log("✓ Using in-memory MongoDB (data will be lost on restart)\n");
-    } catch (memErr) {
-      console.error("✗ Failed to start in-memory MongoDB:", memErr);
-      console.warn('Continuing without DB (some features may not work)');
+      // In production, don't crash - just warn and continue
+      // This allows the app to load even if MongoDB is temporarily unavailable
+      console.warn('⚠ WARNING: MongoDB connection failed in production');
+      console.warn('App will continue but some features may not work');
+      console.warn('Make sure MongoDB cluster is not paused and IP whitelist includes 0.0.0.0/0');
+    } else {
+      // Fallback: use in-memory MongoDB for development
+      console.warn('\n📦 Starting in-memory MongoDB for local development...');
+      try {
+        mongoServer = await MongoMemoryServer.create();
+        mongoUrl = mongoServer.getUri();
+        await mongoose.connect(mongoUrl);
+        connected = true;
+        console.log("✓ Using in-memory MongoDB (data will be lost on restart)\n");
+      } catch (memErr) {
+        console.error("✗ Failed to start in-memory MongoDB:", memErr);
+        console.warn('Continuing without DB (some features may not work)');
+      }
     }
   }
 
