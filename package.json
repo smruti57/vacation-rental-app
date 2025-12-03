@@ -1,12 +1,15 @@
 {
   "engines": {
-    "node": "22.16.0"
+    "node": ">=18 <24"
   },
   "name": "majorproject",
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node app.js",
+    "dev": "nodemon app.js",
+    "seed": "node init/index.js"
   },
   "keywords": [],
   "author": "",
@@ -31,5 +34,9 @@
     "passport": "^0.7.0",
     "passport-local": "^1.0.0",
     "passport-local-mongoose": "^8.0.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.0",
+    "mongodb-memory-server": "^9.1.6"
   }
 }
