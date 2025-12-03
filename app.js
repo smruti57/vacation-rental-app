@@ -180,6 +180,21 @@ async function startApp() {
   app.use('/listings/:id/reviews', reviewRouter);
   app.use('/', userRouter);
 
+  // If database is connected and empty, seed sample data
+  try {
+    if (connected) {
+      const Listing = require('./model/listing');
+      const count = await Listing.countDocuments();
+      if (count === 0 && seedData && Array.isArray(seedData.data)) {
+        console.log('📦 Database is empty. Seeding sample data...');
+        await Listing.insertMany(seedData.data);
+        console.log('✓ Seeded database with sample listings');
+      }
+    }
+  } catch (seedErr) {
+    console.error('Failed to seed database:', seedErr);
+  }
+
   // If using in-memory MongoDB, seed sample data so listings appear
   try {
     if (mongoServer) {
