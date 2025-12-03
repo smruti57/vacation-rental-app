@@ -5,7 +5,17 @@ if(process.env.NODE_ENV != "production"){
 const express = require("express");
 const app = express();
 const mongoose = require("mongoose");
-const { MongoMemoryServer } = require("mongodb-memory-server");
+
+// Only require mongodb-memory-server in development
+let MongoMemoryServer = null;
+if (process.env.NODE_ENV !== 'production') {
+  try {
+    const MMS = require("mongodb-memory-server");
+    MongoMemoryServer = MMS.MongoMemoryServer;
+  } catch (e) {
+    console.warn('mongodb-memory-server not available');
+  }
+}
 
 let mongoServer = null; // In-memory MongoDB instance (for dev)
 
@@ -68,7 +78,7 @@ async function startApp() {
       console.warn('⚠ WARNING: MongoDB connection failed in production');
       console.warn('App will continue but some features may not work');
       console.warn('Make sure MongoDB cluster is not paused and IP whitelist includes 0.0.0.0/0');
-    } else {
+    } else if (MongoMemoryServer) {
       // Fallback: use in-memory MongoDB for development
       console.warn('\n📦 Starting in-memory MongoDB for local development...');
       try {
@@ -81,6 +91,9 @@ async function startApp() {
         console.error("✗ Failed to start in-memory MongoDB:", memErr);
         console.warn('Continuing without DB (some features may not work)');
       }
+    } else {
+      console.warn('⚠ mongodb-memory-server not available for fallback');
+      console.warn('Continuing without DB (some features may not work)');
     }
   }
 
