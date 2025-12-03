@@ -178,30 +178,16 @@ process.on('SIGINT', async () => {
   process.exit(0);
 });
 
-startApp();
-// main().then(()=>{
-//     console.log("connected to db");
-// }).catch((err)=>{
-//     console.log(err);
-// });
+// Export app for serverless and direct execution
+module.exports = { app, startApp };
 
-// async function main(){
-//     await mongoose.connect(dbUrl);
-// }
+// Only call startApp if this file is run directly (not imported for serverless)
+if (require.main === module) {
+  startApp();
+}
 
-// app.get("/",(req,res)=>{
-//     res.send("hi,I am root");
-// });
-
-// (session/passport/routes are registered inside startApp)
-
-
+// Error handler (must be after routes)
 app.use((err,req,res,next)=>{
     let {statusCode=500,message="Something went wrong"} = err;
     res.status(statusCode).render("listings/error.ejs",{message});
-    // res.status(statusCode).send(message);
 });
-
-// app.listen(8080,()=>{
-//     console.log("server is listeing to port 8080");
-// });
