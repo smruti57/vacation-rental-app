@@ -43,7 +43,7 @@ async function startApp() {
 
   try {
     if (!dbUrl) {
-      throw new Error('ATLAS_URL not set');
+      throw new Error('ATLAS_URL environment variable not set');
     }
     await mongoose.connect(dbUrl);
     connected = true;
@@ -52,8 +52,9 @@ async function startApp() {
     console.error("✗ Failed to connect to MongoDB:", err && err.message ? err.message : err);
     
     if (process.env.NODE_ENV === 'production') {
-      console.error('In production, exiting due to DB connection failure');
-      process.exit(1);
+      console.error('❌ PRODUCTION ERROR: Cannot connect to Atlas MongoDB and no fallback available in serverless');
+      console.error('Please ensure ATLAS_URL environment variable is set correctly in Vercel settings');
+      throw new Error('Database connection failed in production');
     }
     
     // Fallback: use in-memory MongoDB for development
