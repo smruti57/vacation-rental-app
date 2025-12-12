@@ -99,8 +99,15 @@ module.exports.createListing = async(req,res,next)=>{
          type: "Point",
           coordinates: [position.lon, position.lat] 
         };
-        let url = req.file.path;
-        let filename = req.file.filename;
+                let filename = req.file.filename;
+                // If Cloudinary is configured we get a remote path in req.file.path; otherwise use local uploads
+                let url;
+                if (process.env.CLOUD_NAME) {
+                    url = req.file.path; // cloudinary or storage provided path
+                } else {
+                    // local disk storage: serve from /uploads
+                    url = `/uploads/${filename}`;
+                }
         const newListing= new Listing(req.body.listing);
         newListing.owner = req.user._id;
         newListing.image = {url,filename};
@@ -120,12 +127,17 @@ module.exports.createListing = async(req,res,next)=>{
 module.exports.updateListing = async(req,res,next)=>{
     let {id}=req.params;
     let listing = await Listing.findByIdAndUpdate(id,{...req.body.listing});
-    if(typeof req.file !== "undefined"){
-         let url = req.file.path;
-         let filename = req.file.filename;
-         listing.image={url,filename};
-         await listing.save();
-    }
+        if(typeof req.file !== "undefined"){
+                 let filename = req.file.filename;
+                 let url;
+                 if (process.env.CLOUD_NAME) {
+                     url = req.file.path;
+                 } else {
+                     url = `/uploads/${filename}`;
+                 }
+                 listing.image={url,filename};
+                 await listing.save();
+        }
     req.flash("success","Listing Updated!");
     res.redirect(`/listings/${id}`);
 };
