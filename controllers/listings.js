@@ -45,6 +45,12 @@ module.exports.showListing = async(req,res,next)=>{
         // Defensive: ensure fields exist before rendering
         if (!listing.image) listing.image = { url: '', filename: '' };
         if (!listing.geometry) listing.geometry = { type: 'Point', coordinates: [0,0] };
+        // Ensure owner exists to avoid template crashes when owner was not populated or missing
+        if (!listing.owner) listing.owner = { username: 'Unknown', _id: null };
+        // Ensure reviews is an array
+        if (!Array.isArray(listing.reviews)) listing.reviews = [];
+        // Ensure price exists
+        if (typeof listing.price === 'undefined' || listing.price === null) listing.price = 0;
 
         res.render('listings/show.ejs', { listing, currUser: req.user });
     } catch (err) {
