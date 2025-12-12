@@ -5,6 +5,15 @@ if(process.env.NODE_ENV != "production"){
 const express = require("express");
 const app = express();
 const mongoose = require("mongoose");
+const fs = require("fs");
+const path = require("path");
+
+// Ensure uploads directory exists
+const uploadsDir = path.join(__dirname, "public/uploads");
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+  console.log(`✓ Created uploads directory at ${uploadsDir}`);
+}
 
 // Only require mongodb-memory-server in development
 let MongoMemoryServer = null;
@@ -20,7 +29,6 @@ if (process.env.NODE_ENV !== 'production') {
 let mongoServer = null; // In-memory MongoDB instance (for dev)
 
 const dbUrl=process.env.ATLAS_URL;
-const path = require("path");
 const methodOverride = require("method-override");
 const ejsMate = require("ejs-mate");
 const ExpressError = require("./utils/ExpressError.js");
@@ -30,6 +38,7 @@ const flash = require("connect-flash");
 const listingRouter = require("./routes/listings.js");
 const reviewRouter = require("./routes/reviews.js");
 const userRouter = require("./routes/user.js");
+const adminRouter = require("./routes/admin.js");
 const seedData = require("./init/data.js");
 
 const passport = require("passport");
@@ -193,6 +202,8 @@ async function startApp() {
   app.use('/listings', listingRouter);
   app.use('/listings/:id/reviews', reviewRouter);
   app.use('/', userRouter);
+  // Admin routes (secure via ADMIN_SECRET env var)
+  app.use('/admin', adminRouter);
 
   // If database is connected and empty, seed sample data
   try {
