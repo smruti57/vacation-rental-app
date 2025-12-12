@@ -46,7 +46,7 @@ module.exports.showListing = async(req,res,next)=>{
         if (!listing.image) listing.image = { url: '', filename: '' };
         if (!listing.geometry) listing.geometry = { type: 'Point', coordinates: [0,0] };
 
-        res.render('listings/show.ejs', { listing, currUser: req.user });
+        res.render('listings/show.ejs', { listing, currUser: req.user, tomtomApiKey: process.env.TOMTOM_API_KEY || '' });
     } catch (err) {
         console.error('Error in showListing:', err);
         req.flash('error', 'Unable to load the listing.');
