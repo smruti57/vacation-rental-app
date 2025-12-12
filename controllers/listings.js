@@ -27,13 +27,31 @@ module.exports.renderNewForm = (req,res)=>{
 };
 
 module.exports.showListing = async(req,res,next)=>{
-    let {id}=req.params;
-    const listing = await Listing.findById(id).populate({path:"reviews",populate:{path:"author"},}).populate("owner");
-    if(!listing){
-        req.flash("error","Listing you requested for does not exist!");
-        return res.redirect("/listings");
+    try {
+        const { id } = req.params;
+        if (!id) {
+            req.flash('error', 'Invalid listing id');
+            return res.redirect('/listings');
+        }
+        const listing = await Listing.findById(id)
+            .populate({ path: 'reviews', populate: { path: 'author' } })
+            .populate('owner');
+
+        if (!listing) {
+            req.flash('error','Listing you requested for does not exist!');
+            return res.redirect('/listings');
+        }
+
+        // Defensive: ensure fields exist before rendering
+        if (!listing.image) listing.image = { url: '', filename: '' };
+        if (!listing.geometry) listing.geometry = { type: 'Point', coordinates: [0,0] };
+
+        res.render('listings/show.ejs', { listing, currUser: req.user });
+    } catch (err) {
+        console.error('Error in showListing:', err);
+        req.flash('error', 'Unable to load the listing.');
+        return res.redirect('/listings');
     }
-    res.render("listings/show.ejs",{listing,currUser: req.user});
 };
 
 module.exports.renderEditForm = async(req,res,next)=>{
@@ -43,9 +61,16 @@ module.exports.renderEditForm = async(req,res,next)=>{
         req.flash("error","Listing you requested for does not exist!");
         return res.redirect("/listings");
     }
-    let originalImageUrl = listing.image.url;
-    originalImageUrl = originalImageUrl.replace("/upload","/upload/w_250");
-    res.render("listings/edit.ejs",{listing,originalImageUrl});
+    // Defensive checks in case image is missing
+    let originalImageUrl = '';
+    if (listing.image && listing.image.url) {
+        try {
+            originalImageUrl = listing.image.url.replace('/upload','/upload/w_250');
+        } catch (e) {
+            originalImageUrl = listing.image.url;
+        }
+    }
+    res.render('listings/edit.ejs',{ listing, originalImageUrl });
 };
 
 module.exports.createListing = async(req,res,next)=>{
