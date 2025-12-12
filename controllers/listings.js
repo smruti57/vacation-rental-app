@@ -1,4 +1,6 @@
 const Listing = require("../model/listing");
+const fs = require('fs');
+const path = require('path');
 const axios = require('axios');
 
 module.exports.index = async(req,res)=>{
@@ -51,6 +53,20 @@ module.exports.showListing = async(req,res,next)=>{
         if (!Array.isArray(listing.reviews)) listing.reviews = [];
         // Ensure price exists
         if (typeof listing.price === 'undefined' || listing.price === null) listing.price = 0;
+
+        // If image URL points to a local upload but the file is missing (ephemeral FS on Render),
+        // replace it with a placeholder so server doesn't try to open a nonexistent file.
+        try {
+            if (listing.image && listing.image.url && listing.image.url.startsWith('/uploads/')) {
+                const localPath = path.join(__dirname, '..', 'public', listing.image.url.replace(/^\//, ''));
+                if (!fs.existsSync(localPath)) {
+                    listing.image.url = '/images/placeholder.svg';
+                }
+            }
+        } catch (e) {
+            console.warn('Error checking local upload file existence:', e && e.message);
+            listing.image.url = '/images/placeholder.svg';
+        }
 
         res.render('listings/show.ejs', { listing, currUser: req.user });
     } catch (err) {
