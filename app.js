@@ -117,6 +117,7 @@ async function startApp() {
   }
 
   if (connected) {
+    console.log('✓ Database connected - Setting up MongoDB session store');
     try {
       // Use clientPromise from mongoose's underlying MongoClient for connect-mongo.
       // This is more robust in serverless environments than relying on mongoUrl alone.
@@ -139,6 +140,7 @@ async function startApp() {
           console.error('ERROR in MONGO SESSION STORE', err);
         });
         sessionOptions.store = store;
+        console.log('✓ Using MongoDB session store');
       } else if (mongoUrl) {
         // Fallback to using the mongoUrl if clientPromise isn't available
         const store = MongoStore.create({
@@ -149,14 +151,16 @@ async function startApp() {
           console.error('ERROR in MONGO SESSION STORE', err);
         });
         sessionOptions.store = store;
+        console.log('✓ Using MongoDB session store (via mongoUrl)');
       } else {
         console.warn('⚠ No mongo client available for session store — using memory store (not for production)');
       }
     } catch (storeErr) {
       console.error('Failed to create Mongo session store:', storeErr);
+      console.warn('⚠ Falling back to memory store');
     }
   } else {
-    console.warn('⚠ Using default (memory) session store — not for production');
+    console.warn('⚠ Database NOT connected - Using default (memory) session store — not for production');
   }
 
   app.use(session(sessionOptions));
@@ -169,10 +173,14 @@ async function startApp() {
   passport.serializeUser(User.serializeUser());
   passport.deserializeUser(User.deserializeUser());
 
+  // Make API keys and config available to all views
+  app.locals.tomtomApiKey = process.env.TOMTOM_API_KEY || '';
+
   app.use((req, res, next) => {
     res.locals.success = req.flash('success');
     res.locals.error = req.flash('error');
     res.locals.CurrUser = req.user;
+    res.locals.tomtomApiKey = process.env.TOMTOM_API_KEY || '';
     next();
   });
 
