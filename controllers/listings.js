@@ -87,41 +87,55 @@ module.exports.createListing = async(req,res,next)=>{
             return res.redirect("/listings/new");
         }
 
-        const address = req.body.listing.location;
-        const response = await axios.get(`https://api.tomtom.com/search/2/geocode/${encodeURIComponent(address)}.json`, {
-            params: {
-                key: process.env.TOMTOM_API_KEY,
-                limit: 1
-            }
-        });
+        let geojsonPoint = { type: "Point", coordinates: [77.2090, 28.6139] }; // Default: Delhi
         
-        if (!response.data.results || response.data.results.length === 0) {
-            req.flash("error", "Location not found. Please enter a valid location!");
-            return res.redirect("/listings/new");
+        // Try to geocode the location if TomTom API key is available
+        if (process.env.TOMTOM_API_KEY) {
+            try {
+                const address = req.body.listing.location;
+                const response = await axios.get(`https://api.tomtom.com/search/2/geocode/${encodeURIComponent(address)}.json`, {
+                    params: {
+                        key: process.env.TOMTOM_API_KEY,
+                        timeout: 5000,
+                        limit: 1
+                    }
+                });
+                
+                if (response.data.results && response.data.results.length > 0) {
+                    const position = response.data.results[0].position;
+                    geojsonPoint = {
+                        type: "Point",
+                        coordinates: [position.lon, position.lat] 
+                    };
+                } else {
+                    console.warn('TomTom geocoding returned no results for:', address);
+                }
+            } catch (geoErr) {
+                console.warn('Geocoding error (using default coordinates):', geoErr.message);
+            }
+        } else {
+            console.warn('TOMTOM_API_KEY not set - using default coordinates for new listing');
         }
 
-        const position = response.data.results[0].position;
-        const geojsonPoint = {
-         type: "Point",
-          coordinates: [position.lon, position.lat] 
-        };
-                let filename = req.file.filename;
-                // If Cloudinary is configured we get a remote path in req.file.path; otherwise use local uploads
-                let url;
-                if (process.env.CLOUD_NAME) {
-                    url = req.file.path; // cloudinary or storage provided path
-                } else {
-                    // local disk storage: serve from /uploads
-                    url = `/uploads/${filename}`;
-                }
-        const newListing= new Listing(req.body.listing);
+        let filename = req.file.filename;
+        // If Cloudinary is configured we get a remote path in req.file.path; otherwise use local uploads
+        let url;
+        if (process.env.CLOUD_NAME) {
+            url = req.file.path; // cloudinary or storage provided path
+        } else {
+            // local disk storage: serve from /uploads
+            url = `/uploads/${filename}`;
+        }
+        
+        const newListing = new Listing(req.body.listing);
         newListing.owner = req.user._id;
-        newListing.image = {url,filename};
-        newListing.geometry=geojsonPoint;
-        newListing.category=req.body.listing.category
+        newListing.image = { url, filename };
+        newListing.geometry = geojsonPoint;
+        newListing.category = req.body.listing.category;
+        
         let savedListing = await newListing.save();
-        console.log(savedListing);
-        req.flash("success","New Listing Created!");
+        console.log('New listing created:', savedListing._id);
+        req.flash("success", "New Listing Created!");
         res.redirect("/listings");
     } catch (err) {
         console.error("Error creating listing:", err);
