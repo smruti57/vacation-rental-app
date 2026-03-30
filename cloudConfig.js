@@ -28,7 +28,15 @@ if (process.env.CLOUD_NAME && process.env.CLOUD_API_KEY && process.env.CLOUD_API
 // Fallback to local disk storage if Cloudinary not configured
 if (!storage) {
     const path = require('path');
-    const uploadsDir = path.join(__dirname, '..', 'public', 'uploads');
+    const uploadsDir = path.join(__dirname, 'public', 'uploads');
+    
+    // Ensure uploads directory exists
+    const fs = require('fs');
+    if (!fs.existsSync(uploadsDir)) {
+        fs.mkdirSync(uploadsDir, { recursive: true });
+        console.log(`✓ Created uploads directory at ${uploadsDir}`);
+    }
+    
     storage = multer.diskStorage({
         destination: function (req, file, cb) {
             cb(null, uploadsDir);
