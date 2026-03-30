@@ -185,14 +185,19 @@ module.exports.createListing = async(req,res,next)=>{
         let filename = req.file.filename;
         let url;
         
-        // If Cloudinary is configured, use the Cloudinary path from multer
-        if (process.env.CLOUD_NAME && req.file.path) {
-            url = req.file.path; // Cloudinary URL from multer-storage-cloudinary
-            console.log(`✓ Image uploaded to Cloudinary: ${filename}`);
+        // Always use req.file.path if available (set by storage provider)
+        if (req.file.path) {
+            url = req.file.path; // Full URL from Cloudinary or local storage
+            console.log(`✓ Image uploaded: ${url}`);
+        } else if (process.env.CLOUD_NAME) {
+            // Fallback for Cloudinary: reconstruct full path with folder
+            const fullFilename = `wanderlust_DEV/${filename}`;
+            url = cloudinary.url(fullFilename, { secure: true });
+            console.log(`✓ Cloudinary fallback: ${url}`);
         } else {
-            // Local disk storage: serve from /uploads
+            // Local storage fallback
             url = `/uploads/${filename}`;
-            console.log(`✓ Image saved locally: ${url}`);
+            console.log(`✓ Local storage: ${url}`);
         }
         
         const newListing = new Listing(req.body.listing);
@@ -219,14 +224,19 @@ module.exports.updateListing = async(req,res,next)=>{
                  let filename = req.file.filename;
                  let url;
                  
-                 // If Cloudinary is configured, use the Cloudinary path from multer
-                 if (process.env.CLOUD_NAME && req.file.path) {
-                     url = req.file.path; // Cloudinary URL from multer-storage-cloudinary
-                     console.log(`✓ Image updated on Cloudinary: ${filename}`);
+                 // Always use req.file.path if available (set by storage provider)
+                 if (req.file.path) {
+                     url = req.file.path; // Full URL from Cloudinary or local storage
+                     console.log(`✓ Image updated: ${url}`);
+                 } else if (process.env.CLOUD_NAME) {
+                     // Fallback for Cloudinary: reconstruct full path with folder
+                     const fullFilename = `wanderlust_DEV/${filename}`;
+                     url = cloudinary.url(fullFilename, { secure: true });
+                     console.log(`✓ Cloudinary fallback: ${url}`);
                  } else {
-                     // Local disk storage: serve from /uploads
+                     // Local storage fallback
                      url = `/uploads/${filename}`;
-                     console.log(`✓ Image updated locally: ${url}`);
+                     console.log(`✓ Local storage: ${url}`);
                  }
                  
                  listing.image={url,filename};
