@@ -16,7 +16,8 @@ if (process.env.CLOUD_NAME && process.env.CLOUD_API_KEY && process.env.CLOUD_API
             cloudinary: cloudinary,
             params: {
                 folder: 'wanderlust_DEV',
-                allowed_formats: ['png','jpg','jpeg']
+                allowed_formats: ['png','jpg','jpeg','webp','gif','bmp'],
+                resource_type: 'auto'
             }
         });
     } catch (err) {
@@ -52,4 +53,15 @@ if (!storage) {
 module.exports = {
     cloudinary,
     storage,
+    // Middleware to ensure req.file.path is set consistently
+    ensureFilePath: (req, res, next) => {
+        if (req.file) {
+            // If path is not set (local storage), craft it
+            if (!req.file.path && req.file.filename) {
+                req.file.path = `/uploads/${req.file.filename}`;
+            }
+            console.log(`✓ File processed - path: ${req.file.path}`);
+        }
+        next();
+    }
 };

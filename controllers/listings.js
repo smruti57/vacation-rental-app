@@ -5,54 +5,29 @@ const axios = require('axios');
 const cloudinary = require('cloudinary').v2;
 
 function getSafeImageUrl(listing) {
-    if (!listing || !listing.image) {
+    if (!listing || !listing.image || !listing.image.url) {
         return '/images/placeholder.svg';
     }
     
-    const { url, filename } = listing.image;
+    const url = listing.image.url;
     
-    // If URL is already a full HTTP(S) URL, return it directly
-    if (url && (url.startsWith('http://') || url.startsWith('https://'))) {
-        console.log(`✓ Using existing HTTP URL: ${url}`);
+    // If it's a complete HTTP(S) URL, return as-is (includes Cloudinary URLs with proper version)
+    if (url.startsWith('http://') || url.startsWith('https://')) {
         return url;
     }
     
-    // Check if it's a local upload path
-    if (url && url.startsWith('/uploads/')) {
+    // If it's a local path, check if file exists
+    if (url.startsWith('/uploads/')) {
         const localPath = path.join(__dirname, '..', 'public', url.replace(/^\//, ''));
         if (fs.existsSync(localPath)) {
-            console.log(`✓ Local file exists: ${url}`);
             return url;
         }
-        // Local file doesn't exist, try Cloudinary as fallback
-        if (filename && process.env.CLOUD_NAME) {
-            try {
-                // Construct full Cloudinary URL with folder
-                const fullFilename = `wanderlust_DEV/${filename}`;
-                const cloudinaryUrl = cloudinary.url(fullFilename, { secure: true });
-                console.log(`✓ Fallback: Using Cloudinary URL: ${cloudinaryUrl}`);
-                return cloudinaryUrl;
-            } catch (e) {
-                console.warn(`✗ Cloudinary fallback failed for ${filename}:`, e.message);
-            }
-        }
+        console.warn(`⚠ Local file not found: ${localPath}`);
         return '/images/placeholder.svg';
     }
     
-    // Try using filename with Cloudinary if no valid URL exists
-    if (filename && process.env.CLOUD_NAME) {
-        try {
-            // Construct full Cloudinary URL with folder
-            const fullFilename = `wanderlust_DEV/${filename}`;
-            const cloudinaryUrl = cloudinary.url(fullFilename, { secure: true });
-            console.log(`✓ Using Cloudinary URL: ${cloudinaryUrl}`);
-            return cloudinaryUrl;
-        } catch (e) {
-            console.warn(`✗ Cloudinary URL generation failed for ${filename}:`, e.message);
-        }
-    }
-    
-    console.warn(`✗ No valid image URL found for listing, using placeholder`);
+    // Unknown format, use placeholder
+    console.warn(`⚠ Unknown image URL format: ${url}`);
     return '/images/placeholder.svg';
 }
 
@@ -185,19 +160,16 @@ module.exports.createListing = async(req,res,next)=>{
         let filename = req.file.filename;
         let url;
         
-        // Always use req.file.path if available (set by storage provider)
+        // IMPORTANT: req.file.path contains the FULL URL from the storage provider
+        // For Cloudinary: complete URL like https://res.cloudinary.com/.../v1765544033/...
+        // For local: will be empty, so we construct it
         if (req.file.path) {
-            url = req.file.path; // Full URL from Cloudinary or local storage
-            console.log(`✓ Image uploaded: ${url}`);
-        } else if (process.env.CLOUD_NAME) {
-            // Fallback for Cloudinary: reconstruct full path with folder
-            const fullFilename = `wanderlust_DEV/${filename}`;
-            url = cloudinary.url(fullFilename, { secure: true });
-            console.log(`✓ Cloudinary fallback: ${url}`);
+            url = req.file.path;
+            console.log(`✓ Full URL from storage: ${url}`);
         } else {
-            // Local storage fallback
+            // Fallback: construct local path
             url = `/uploads/${filename}`;
-            console.log(`✓ Local storage: ${url}`);
+            console.log(`✓ Local upload: ${url}`);
         }
         
         const newListing = new Listing(req.body.listing);
@@ -224,19 +196,14 @@ module.exports.updateListing = async(req,res,next)=>{
                  let filename = req.file.filename;
                  let url;
                  
-                 // Always use req.file.path if available (set by storage provider)
+                 // IMPORTANT: req.file.path contains the FULL URL from the storage provider
                  if (req.file.path) {
-                     url = req.file.path; // Full URL from Cloudinary or local storage
-                     console.log(`✓ Image updated: ${url}`);
-                 } else if (process.env.CLOUD_NAME) {
-                     // Fallback for Cloudinary: reconstruct full path with folder
-                     const fullFilename = `wanderlust_DEV/${filename}`;
-                     url = cloudinary.url(fullFilename, { secure: true });
-                     console.log(`✓ Cloudinary fallback: ${url}`);
+                     url = req.file.path;
+                     console.log(`✓ Full URL from storage: ${url}`);
                  } else {
-                     // Local storage fallback
+                     // Fallback: construct local path
                      url = `/uploads/${filename}`;
-                     console.log(`✓ Local storage: ${url}`);
+                     console.log(`✓ Local upload: ${url}`);
                  }
                  
                  listing.image={url,filename};
