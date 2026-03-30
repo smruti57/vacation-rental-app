@@ -2,6 +2,39 @@ const Listing = require("../model/listing");
 const fs = require('fs');
 const path = require('path');
 const axios = require('axios');
+const cloudinary = require('cloudinary').v2;
+
+function getSafeImageUrl(listing) {
+    if (listing && listing.image && listing.image.url) {
+        const url = listing.image.url;
+        if (url.startsWith('/uploads/')) {
+            const localPath = path.join(__dirname, '..', 'public', url.replace(/^\//, ''));
+            if (fs.existsSync(localPath)) {
+                return url;
+            }
+            if (process.env.CLOUD_NAME && listing.image.filename) {
+                try {
+                    return cloudinary.url(listing.image.filename, { secure: true });
+                } catch (e) {
+                    console.warn('Cloudinary fallback URL generation failed:', e.message);
+                    return '/images/placeholder.svg';
+                }
+            }
+            return '/images/placeholder.svg';
+        }
+        if (url.startsWith('http://') || url.startsWith('https://')) {
+            return url;
+        }
+    }
+    if (listing && listing.image && listing.image.filename && process.env.CLOUD_NAME) {
+        try {
+            return cloudinary.url(listing.image.filename, { secure: true });
+        } catch (e) {
+            console.warn('Cloudinary fallback with filename failed:', e.message);
+        }
+    }
+    return '/images/placeholder.svg';
+}
 
 module.exports.index = async(req,res)=>{
     const { category,country  } = req.query;
@@ -21,6 +54,13 @@ module.exports.index = async(req,res)=>{
     }else {
     allListings = await Listing.find({});
     }
+
+    allListings = allListings.map(listing => {
+      listing.image = listing.image || {};
+      listing.image.url = getSafeImageUrl(listing);
+      return listing;
+    });
+
     res.render("listings/index.ejs",{allListings,category,country});
 };
 
@@ -54,29 +94,8 @@ module.exports.showListing = async(req,res,next)=>{
         // Ensure price exists
         if (typeof listing.price === 'undefined' || listing.price === null) listing.price = 0;
 
-        // If image URL points to a local upload but the file is missing (ephemeral FS on Render),
-        // try to use Cloudinary URL (if configured) before falling back to placeholder.
-        try {
-            if (listing.image && listing.image.url && listing.image.url.startsWith('/uploads/')) {
-                const localPath = path.join(__dirname, '..', 'public', listing.image.url.replace(/^\//, ''));
-                if (!fs.existsSync(localPath)) {
-                    if (process.env.CLOUD_NAME && listing.image && listing.image.filename) {
-                        try {
-                            const cloudinary = require('cloudinary').v2;
-                            listing.image.url = cloudinary.url(listing.image.filename, { secure: true });
-                        } catch (cloudErr) {
-                            console.warn('Cloudinary not available for fallback:', cloudErr.message);
-                            listing.image.url = '/images/placeholder.svg';
-                        }
-                    } else {
-                        listing.image.url = '/images/placeholder.svg';
-                    }
-                }
-            }
-        } catch (e) {
-            console.warn('Error checking local upload file existence:', e && e.message);
-            listing.image.url = '/images/placeholder.svg';
-        }
+        listing.image = listing.image || {};
+        listing.image.url = getSafeImageUrl(listing);
 
         res.render('listings/show.ejs', { listing, currUser: req.user });
     } catch (err) {
