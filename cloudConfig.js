@@ -53,14 +53,19 @@ if (!storage) {
 module.exports = {
     cloudinary,
     storage,
-    // Middleware to ensure req.file.path is set consistently
+    // Middleware to ensure req.file.path is set to web-accessible URL
     ensureFilePath: (req, res, next) => {
         if (req.file) {
-            // If path is not set (local storage), craft it
-            if (!req.file.path && req.file.filename) {
-                req.file.path = `/uploads/${req.file.filename}`;
+            // For Cloudinary: req.file.path should already be a full HTTP URL
+            if (req.file.path && req.file.path.startsWith('http')) {
+                console.log(`✓ Cloudinary URL: ${req.file.path}`);
+            } else {
+                // For local storage: convert absolute path to web URL
+                // req.file.path might be the full absolute path, extract just the filename
+                const filename = req.file.filename || req.file.originalname;
+                req.file.path = `/uploads/${filename}`;
+                console.log(`✓ Local upload path set to: ${req.file.path}`);
             }
-            console.log(`✓ File processed - path: ${req.file.path}`);
         }
         next();
     }

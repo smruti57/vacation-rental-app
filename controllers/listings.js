@@ -9,25 +9,28 @@ function getSafeImageUrl(listing) {
         return '/images/placeholder.svg';
     }
     
-    const url = listing.image.url;
+    let url = listing.image.url;
     
-    // If it's a complete HTTP(S) URL, return as-is (includes Cloudinary URLs with proper version)
+    // If it's a complete HTTP(S) URL (Cloudinary), return as-is
     if (url.startsWith('http://') || url.startsWith('https://')) {
         return url;
     }
     
-    // If it's a local path, check if file exists
+    // If it's a local path, return as-is
     if (url.startsWith('/uploads/')) {
-        const localPath = path.join(__dirname, '..', 'public', url.replace(/^\//, ''));
-        if (fs.existsSync(localPath)) {
-            return url;
-        }
-        console.warn(`⚠ Local file not found: ${localPath}`);
-        return '/images/placeholder.svg';
+        return url;
+    }
+    
+    // Handle absolute server paths (production deployment paths)
+    // E.g., /opt/render/project/src/public/uploads/file.jpg -> /uploads/file.jpg
+    if (url.includes('/uploads/')) {
+        const filename = url.substring(url.lastIndexOf('/uploads/') + 1);
+        console.log(`ℹ Converting server path to web URL: /uploads/${filename}`);
+        return `/uploads/${filename}`;
     }
     
     // Unknown format, use placeholder
-    console.warn(`⚠ Unknown image URL format: ${url}`);
+    console.warn(`⚠ Invalid image URL format: ${url}`);
     return '/images/placeholder.svg';
 }
 
