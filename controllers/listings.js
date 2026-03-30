@@ -16,7 +16,7 @@ function getSafeImageUrl(listing) {
         return url;
     }
     
-    // If it's a local path, return as-is
+    // If it's already a local web path, return as-is
     if (url.startsWith('/uploads/')) {
         return url;
     }
@@ -24,9 +24,11 @@ function getSafeImageUrl(listing) {
     // Handle absolute server paths (production deployment paths)
     // E.g., /opt/render/project/src/public/uploads/file.jpg -> /uploads/file.jpg
     if (url.includes('/uploads/')) {
-        const filename = url.substring(url.lastIndexOf('/uploads/') + 1);
-        console.log(`ℹ Converting server path to web URL: /uploads/${filename}`);
-        return `/uploads/${filename}`;
+        // Extract everything from /uploads/ onwards
+        const uploadsIndex = url.indexOf('/uploads/');
+        const webPath = url.substring(uploadsIndex);
+        console.log(`ℹ Converting server path to web URL: ${webPath}`);
+        return webPath;
     }
     
     // Unknown format, use placeholder
