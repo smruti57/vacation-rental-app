@@ -43,7 +43,7 @@ if (!storage) {
         },
         filename: function (req, file, cb) {
             const unique = Date.now() + '-' + Math.round(Math.random() * 1E9);
-            const ext = file.originalname.split('.').pop();
+            const ext = path.extname(file.originalname).slice(1);
             cb(null, `${unique}.${ext}`);
         }
     });
