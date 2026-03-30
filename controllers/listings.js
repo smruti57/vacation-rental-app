@@ -13,6 +13,7 @@ function getSafeImageUrl(listing) {
     
     // If URL is already a full HTTP(S) URL, return it directly
     if (url && (url.startsWith('http://') || url.startsWith('https://'))) {
+        console.log(`✓ Using existing HTTP URL: ${url}`);
         return url;
     }
     
@@ -20,13 +21,16 @@ function getSafeImageUrl(listing) {
     if (url && url.startsWith('/uploads/')) {
         const localPath = path.join(__dirname, '..', 'public', url.replace(/^\//, ''));
         if (fs.existsSync(localPath)) {
-            return url; // File exists locally
+            console.log(`✓ Local file exists: ${url}`);
+            return url;
         }
         // Local file doesn't exist, try Cloudinary as fallback
         if (filename && process.env.CLOUD_NAME) {
             try {
-                const cloudinaryUrl = cloudinary.url(filename, { secure: true });
-                console.log(`✓ Fallback: Using Cloudinary URL for missing local file: ${filename}`);
+                // Construct full Cloudinary URL with folder
+                const fullFilename = `wanderlust_DEV/${filename}`;
+                const cloudinaryUrl = cloudinary.url(fullFilename, { secure: true });
+                console.log(`✓ Fallback: Using Cloudinary URL: ${cloudinaryUrl}`);
                 return cloudinaryUrl;
             } catch (e) {
                 console.warn(`✗ Cloudinary fallback failed for ${filename}:`, e.message);
@@ -38,13 +42,17 @@ function getSafeImageUrl(listing) {
     // Try using filename with Cloudinary if no valid URL exists
     if (filename && process.env.CLOUD_NAME) {
         try {
-            const cloudinaryUrl = cloudinary.url(filename, { secure: true });
+            // Construct full Cloudinary URL with folder
+            const fullFilename = `wanderlust_DEV/${filename}`;
+            const cloudinaryUrl = cloudinary.url(fullFilename, { secure: true });
+            console.log(`✓ Using Cloudinary URL: ${cloudinaryUrl}`);
             return cloudinaryUrl;
         } catch (e) {
             console.warn(`✗ Cloudinary URL generation failed for ${filename}:`, e.message);
         }
     }
     
+    console.warn(`✗ No valid image URL found for listing, using placeholder`);
     return '/images/placeholder.svg';
 }
 
