@@ -55,12 +55,22 @@ module.exports.showListing = async(req,res,next)=>{
         if (typeof listing.price === 'undefined' || listing.price === null) listing.price = 0;
 
         // If image URL points to a local upload but the file is missing (ephemeral FS on Render),
-        // replace it with a placeholder so server doesn't try to open a nonexistent file.
+        // try to use Cloudinary URL (if configured) before falling back to placeholder.
         try {
             if (listing.image && listing.image.url && listing.image.url.startsWith('/uploads/')) {
                 const localPath = path.join(__dirname, '..', 'public', listing.image.url.replace(/^\//, ''));
                 if (!fs.existsSync(localPath)) {
-                    listing.image.url = '/images/placeholder.svg';
+                    if (process.env.CLOUD_NAME && listing.image && listing.image.filename) {
+                        try {
+                            const cloudinary = require('cloudinary').v2;
+                            listing.image.url = cloudinary.url(listing.image.filename, { secure: true });
+                        } catch (cloudErr) {
+                            console.warn('Cloudinary not available for fallback:', cloudErr.message);
+                            listing.image.url = '/images/placeholder.svg';
+                        }
+                    } else {
+                        listing.image.url = '/images/placeholder.svg';
+                    }
                 }
             }
         } catch (e) {
