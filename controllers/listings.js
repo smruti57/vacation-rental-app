@@ -5,34 +5,46 @@ const axios = require('axios');
 const cloudinary = require('cloudinary').v2;
 
 function getSafeImageUrl(listing) {
-    if (listing && listing.image && listing.image.url) {
-        const url = listing.image.url;
-        if (url.startsWith('/uploads/')) {
-            const localPath = path.join(__dirname, '..', 'public', url.replace(/^\//, ''));
-            if (fs.existsSync(localPath)) {
-                return url;
-            }
-            if (process.env.CLOUD_NAME && listing.image.filename) {
-                try {
-                    return cloudinary.url(listing.image.filename, { secure: true });
-                } catch (e) {
-                    console.warn('Cloudinary fallback URL generation failed:', e.message);
-                    return '/images/placeholder.svg';
-                }
-            }
-            return '/images/placeholder.svg';
-        }
-        if (url.startsWith('http://') || url.startsWith('https://')) {
-            return url;
-        }
+    if (!listing || !listing.image) {
+        return '/images/placeholder.svg';
     }
-    if (listing && listing.image && listing.image.filename && process.env.CLOUD_NAME) {
+    
+    const { url, filename } = listing.image;
+    
+    // If URL is already a full HTTP(S) URL, return it directly
+    if (url && (url.startsWith('http://') || url.startsWith('https://'))) {
+        return url;
+    }
+    
+    // Check if it's a local upload path
+    if (url && url.startsWith('/uploads/')) {
+        const localPath = path.join(__dirname, '..', 'public', url.replace(/^\//, ''));
+        if (fs.existsSync(localPath)) {
+            return url; // File exists locally
+        }
+        // Local file doesn't exist, try Cloudinary as fallback
+        if (filename && process.env.CLOUD_NAME) {
+            try {
+                const cloudinaryUrl = cloudinary.url(filename, { secure: true });
+                console.log(`✓ Fallback: Using Cloudinary URL for missing local file: ${filename}`);
+                return cloudinaryUrl;
+            } catch (e) {
+                console.warn(`✗ Cloudinary fallback failed for ${filename}:`, e.message);
+            }
+        }
+        return '/images/placeholder.svg';
+    }
+    
+    // Try using filename with Cloudinary if no valid URL exists
+    if (filename && process.env.CLOUD_NAME) {
         try {
-            return cloudinary.url(listing.image.filename, { secure: true });
+            const cloudinaryUrl = cloudinary.url(filename, { secure: true });
+            return cloudinaryUrl;
         } catch (e) {
-            console.warn('Cloudinary fallback with filename failed:', e.message);
+            console.warn(`✗ Cloudinary URL generation failed for ${filename}:`, e.message);
         }
     }
+    
     return '/images/placeholder.svg';
 }
 
@@ -163,13 +175,16 @@ module.exports.createListing = async(req,res,next)=>{
         }
 
         let filename = req.file.filename;
-        // If Cloudinary is configured we get a remote path in req.file.path; otherwise use local uploads
         let url;
-        if (process.env.CLOUD_NAME) {
-            url = req.file.path; // cloudinary or storage provided path
+        
+        // If Cloudinary is configured, use the Cloudinary path from multer
+        if (process.env.CLOUD_NAME && req.file.path) {
+            url = req.file.path; // Cloudinary URL from multer-storage-cloudinary
+            console.log(`✓ Image uploaded to Cloudinary: ${filename}`);
         } else {
-            // local disk storage: serve from /uploads
+            // Local disk storage: serve from /uploads
             url = `/uploads/${filename}`;
+            console.log(`✓ Image saved locally: ${url}`);
         }
         
         const newListing = new Listing(req.body.listing);
@@ -195,11 +210,17 @@ module.exports.updateListing = async(req,res,next)=>{
         if(typeof req.file !== "undefined"){
                  let filename = req.file.filename;
                  let url;
-                 if (process.env.CLOUD_NAME) {
-                     url = req.file.path;
+                 
+                 // If Cloudinary is configured, use the Cloudinary path from multer
+                 if (process.env.CLOUD_NAME && req.file.path) {
+                     url = req.file.path; // Cloudinary URL from multer-storage-cloudinary
+                     console.log(`✓ Image updated on Cloudinary: ${filename}`);
                  } else {
+                     // Local disk storage: serve from /uploads
                      url = `/uploads/${filename}`;
+                     console.log(`✓ Image updated locally: ${url}`);
                  }
+                 
                  listing.image={url,filename};
                  await listing.save();
         }
