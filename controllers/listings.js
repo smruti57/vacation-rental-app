@@ -148,6 +148,14 @@ module.exports.createListing = async(req,res,next)=>{
         console.log(`  | mimetype: ${req.file.mimetype}`);
         console.log(`  | size: ${req.file.size}`);
 
+        // Validate listing data
+        if (!req.body.listing) {
+            throw new Error("Listing data is missing from form");
+        }
+        if (!req.body.listing.location) {
+            throw new Error("Location is required");
+        }
+
         let geojsonPoint = { type: "Point", coordinates: [77.2090, 28.6139] }; // Default: Delhi
         
         // Try to geocode the location if TomTom API key is available
@@ -208,8 +216,11 @@ module.exports.createListing = async(req,res,next)=>{
         req.flash("success", "New Listing Created!");
         res.redirect("/listings");
     } catch (err) {
-        console.error("Error creating listing:", err);
-        req.flash("error", `Error: ${err.message}`);
+        console.error("❌ Error creating listing:", err);
+        console.error("Error message:", err.message);
+        console.error("Error stack:", err.stack);
+        let errorMsg = err.message || "Unknown error occurred";
+        req.flash("error", `Error: ${errorMsg}`);
         res.redirect("/listings/new");
     }
 };
