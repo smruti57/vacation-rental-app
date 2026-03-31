@@ -58,9 +58,18 @@ module.exports = {
     // Middleware to ensure req.file.path is set to web-accessible URL
     ensureFilePath: (req, res, next) => {
         if (req.file) {
+            console.log(`\n🔍 ensureFilePath middleware - req.file object:`, {
+                filename: req.file.filename,
+                originalname: req.file.originalname,
+                path: req.file.path?.substring(0, 100),
+                pathFull: req.file.path,
+                mimetype: req.file.mimetype,
+                size: req.file.size
+            });
+            
             // For Cloudinary: req.file.path should already be a full HTTP URL
             if (req.file.path && req.file.path.startsWith('http')) {
-                console.log(`✓ Cloudinary URL: ${req.file.path}`);
+                console.log(`✓ Cloudinary URL detected: ${req.file.path.substring(0, 80)}...`);
             } else {
                 // For local storage: convert absolute path to web URL
                 // req.file.path might be the full absolute path, extract just the filename
@@ -68,6 +77,8 @@ module.exports = {
                 req.file.path = `/uploads/${filename}`;
                 console.log(`✓ Local upload path set to: ${req.file.path}`);
             }
+        } else {
+            console.log(`⚠ ensureFilePath: No req.file provided`);
         }
         next();
     }

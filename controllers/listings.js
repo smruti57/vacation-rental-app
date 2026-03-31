@@ -140,6 +140,14 @@ module.exports.createListing = async(req,res,next)=>{
             return res.redirect("/listings/new");
         }
 
+        // DEBUG: Log the full req.file object
+        console.log(`\n📤 File Upload Details:`);
+        console.log(`  | filename: ${req.file.filename}`);
+        console.log(`  | originalname: ${req.file.originalname}`);
+        console.log(`  | path: ${req.file.path}`);
+        console.log(`  | mimetype: ${req.file.mimetype}`);
+        console.log(`  | size: ${req.file.size}`);
+
         let geojsonPoint = { type: "Point", coordinates: [77.2090, 28.6139] }; // Default: Delhi
         
         // Try to geocode the location if TomTom API key is available
