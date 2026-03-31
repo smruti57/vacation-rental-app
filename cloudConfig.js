@@ -1,6 +1,7 @@
 const multer = require('multer');
 let cloudinary = null;
 let storage = null;
+let usingCloudinary = false;
 
 // If Cloudinary credentials present, use Cloudinary storage
 if (process.env.CLOUD_NAME && process.env.CLOUD_API_KEY && process.env.CLOUD_API_SECRET) {
@@ -14,16 +15,21 @@ if (process.env.CLOUD_NAME && process.env.CLOUD_API_KEY && process.env.CLOUD_API
         });
         storage = new CloudinaryStorage({
             cloudinary: cloudinary,
-            params: {
-                folder: 'wanderlust_DEV',
-                allowed_formats: ['png','jpg','jpeg','webp','gif','bmp'],
-                resource_type: 'auto'
+            params: async (req, file) => {
+                return {
+                    folder: 'wanderlust_DEV',
+                    resource_type: 'auto',
+                    allowed_formats: ['png','jpg','jpeg','webp','gif','bmp']
+                };
             }
         });
-        console.log(`✓ Cloudinary initialized for cloud: ${process.env.CLOUD_NAME}`);
+        usingCloudinary = true;
+        console.log(`✅ Cloudinary STORAGE initialized for cloud: ${process.env.CLOUD_NAME}`);
     } catch (err) {
-        console.warn('⚠ Cloudinary configuration failed, falling back to local storage', err && err.message);
+        console.error('❌ Cloudinary configuration error:', err.message);
+        console.error('Stack:', err.stack);
         cloudinary = null;
+        usingCloudinary = false;
     }
 }
 
@@ -55,27 +61,31 @@ if (!storage) {
 module.exports = {
     cloudinary,
     storage,
+    usingCloudinary,
     // Middleware to ensure req.file.path is set to web-accessible URL
     ensureFilePath: (req, res, next) => {
         if (req.file) {
-            console.log(`\n🔍 ensureFilePath middleware - req.file object:`, {
+            console.log(`\n🔍 ensureFilePath middleware:`, {
+                storageType: usingCloudinary ? 'CLOUDINARY' : 'LOCAL DISK',
                 filename: req.file.filename,
                 originalname: req.file.originalname,
-                path: req.file.path?.substring(0, 100),
-                pathFull: req.file.path,
-                mimetype: req.file.mimetype,
-                size: req.file.size
+                pathReceived: req.file.path?.substring(0, 120),
             });
             
             // For Cloudinary: req.file.path should already be a full HTTP URL
-            if (req.file.path && req.file.path.startsWith('http')) {
-                console.log(`✓ Cloudinary URL detected: ${req.file.path.substring(0, 80)}...`);
-            } else {
+            if (usingCloudinary && req.file.path && req.file.path.startsWith('http')) {
+                console.log(`✅ Cloudinary URL: ${req.file.path.substring(0, 100)}...`);
+                // req.file.path is already correct from Cloudinary
+            } else if (!usingCloudinary) {
                 // For local storage: convert absolute path to web URL
-                // req.file.path might be the full absolute path, extract just the filename
                 const filename = req.file.filename || req.file.originalname;
                 req.file.path = `/uploads/${filename}`;
-                console.log(`✓ Local upload path set to: ${req.file.path}`);
+                console.log(`✅ Local storage converted to: ${req.file.path}`);
+            } else {
+                console.warn(`⚠ Unexpected: Cloudinary configured but got relative path: ${req.file.path}`);
+                // Fallback: try to extract filename
+                const filename = req.file.filename || req.file.originalname;
+                req.file.path = `/uploads/${filename}`;
             }
         } else {
             console.log(`⚠ ensureFilePath: No req.file provided`);
