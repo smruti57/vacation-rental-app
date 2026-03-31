@@ -214,7 +214,7 @@ module.exports.createListing = async(req,res,next)=>{
         console.log(`  | Image URL in DB: ${savedListing.image.url}`);
         console.log(`  | Image filename: ${savedListing.image.filename}\n`);
         req.flash("success", "New Listing Created!");
-        res.redirect("/listings");
+        res.redirect(`/listings/${savedListing._id}`);
     } catch (err) {
         console.error("❌ Error creating listing:", err);
         console.error("Error message:", err.message);
