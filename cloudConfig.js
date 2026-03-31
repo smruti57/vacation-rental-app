@@ -15,12 +15,10 @@ if (process.env.CLOUD_NAME && process.env.CLOUD_API_KEY && process.env.CLOUD_API
         });
         storage = new CloudinaryStorage({
             cloudinary: cloudinary,
-            params: async (req, file) => {
-                return {
-                    folder: 'wanderlust_DEV',
-                    resource_type: 'auto',
-                    allowed_formats: ['png','jpg','jpeg','webp','gif','bmp']
-                };
+            params: {
+                folder: 'wanderlust_DEV',
+                resource_type: 'auto',
+                allowed_formats: ['png','jpg','jpeg','webp','gif','bmp']
             }
         });
         usingCloudinary = true;
@@ -65,30 +63,24 @@ module.exports = {
     // Middleware to ensure req.file.path is set to web-accessible URL
     ensureFilePath: (req, res, next) => {
         if (req.file) {
-            console.log(`\n🔍 ensureFilePath middleware:`, {
-                storageType: usingCloudinary ? 'CLOUDINARY' : 'LOCAL DISK',
-                filename: req.file.filename,
-                originalname: req.file.originalname,
-                pathReceived: req.file.path?.substring(0, 120),
-            });
+            const storageType = usingCloudinary ? 'CLOUDINARY' : 'LOCAL DISK';
+            console.log(`\n🔍 ensureFilePath - Storage: ${storageType}, File: ${req.file.filename}`);
             
             // For Cloudinary: req.file.path should already be a full HTTP URL
             if (usingCloudinary && req.file.path && req.file.path.startsWith('http')) {
-                console.log(`✅ Cloudinary URL: ${req.file.path.substring(0, 100)}...`);
+                console.log(`✅ Cloudinary URL: ${req.file.path.substring(0, 80)}...`);
                 // req.file.path is already correct from Cloudinary
             } else if (!usingCloudinary) {
                 // For local storage: convert absolute path to web URL
                 const filename = req.file.filename || req.file.originalname;
                 req.file.path = `/uploads/${filename}`;
-                console.log(`✅ Local storage converted to: ${req.file.path}`);
+                console.log(`✅ Local storage: ${req.file.path}`);
             } else {
-                console.warn(`⚠ Unexpected: Cloudinary configured but got relative path: ${req.file.path}`);
-                // Fallback: try to extract filename
+                console.warn(`⚠ Cloudinary enabled but got server path: ${req.file.path}`);
+                // Fallback
                 const filename = req.file.filename || req.file.originalname;
                 req.file.path = `/uploads/${filename}`;
             }
-        } else {
-            console.log(`⚠ ensureFilePath: No req.file provided`);
         }
         next();
     }
