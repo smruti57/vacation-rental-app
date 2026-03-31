@@ -20,8 +20,9 @@ if (process.env.CLOUD_NAME && process.env.CLOUD_API_KEY && process.env.CLOUD_API
                 resource_type: 'auto'
             }
         });
+        console.log(`✓ Cloudinary initialized for cloud: ${process.env.CLOUD_NAME}`);
     } catch (err) {
-        console.warn('Cloudinary configuration failed, falling back to local storage', err && err.message);
+        console.warn('⚠ Cloudinary configuration failed, falling back to local storage', err && err.message);
         cloudinary = null;
     }
 }
@@ -48,6 +49,7 @@ if (!storage) {
             cb(null, `${unique}.${ext}`);
         }
     });
+    console.log(`✓ Using LOCAL DISK STORAGE for uploads at: ${uploadsDir}`);
 }
 
 module.exports = {

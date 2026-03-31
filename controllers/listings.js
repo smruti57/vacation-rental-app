@@ -95,7 +95,15 @@ module.exports.showListing = async(req,res,next)=>{
         if (typeof listing.price === 'undefined' || listing.price === null) listing.price = 0;
 
         listing.image = listing.image || {};
+        const rawUrl = listing.image.url;
         listing.image.url = getSafeImageUrl(listing);
+        
+        // DEBUG LOGGING
+        console.log(`\n📸 Loading listing ${id}:`);
+        console.log(`  | Raw URL from DB: ${rawUrl || 'NO URL'}`);
+        console.log(`  | Processed URL: ${listing.image.url}`);
+        console.log(`  | Is Cloudinary: ${(rawUrl || '').includes('cloudinary')}`);
+        console.log(`  | Is Local Upload: ${(rawUrl || '').startsWith('/uploads/')}\n`);
 
         res.render('listings/show.ejs', { listing, currUser: req.user });
     } catch (err) {
@@ -170,14 +178,25 @@ module.exports.createListing = async(req,res,next)=>{
         // For local: will be empty, so we construct it
         if (req.file.path) {
             url = req.file.path;
-            console.log(`✓ Full URL from storage: ${url}`);
+            console.log(`✓ Cloudinary/Storage URL: ${url}`);
+            console.log(`  | Filename: ${filename}`);
         } else {
             // Fallback: construct local path
             url = `/uploads/${filename}`;
-            console.log(`✓ Local upload: ${url}`);
+            console.log(`✓ Local upload URL: ${url}`);
         }
         
         const newListing = new Listing(req.body.listing);
+        newListing.owner = req.user._id;
+        newListing.image = { url, filename };
+        newListing.geometry = geojsonPoint;
+        newListing.category = req.body.listing.category;
+        
+        let savedListing = await newListing.save();
+        console.log(`\n✓ Listing saved to DB:`);
+        console.log(`  | ID: ${savedListing._id}`);
+        console.log(`  | Image URL in DB: ${savedListing.image.url}`);
+        console.log(`  | Image filename: ${savedListing.image.filename}\n`);
         newListing.owner = req.user._id;
         newListing.image = { url, filename };
         newListing.geometry = geojsonPoint;

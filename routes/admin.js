@@ -37,4 +37,44 @@ router.post('/fix-missing-uploads', async (req, res) => {
   }
 });
 
+// GET /admin/debug/listing/:id
+// View raw image URL and storage details for a specific listing (for troubleshooting)
+router.get('/debug/listing/:id', async (req, res) => {
+  try {
+    const listing = await Listing.findById(req.params.id);
+    if (!listing) {
+      return res.status(404).json({ error: 'Listing not found' });
+    }
+    
+    const imageUrl = listing.image?.url || 'NO IMAGE URL STORED';
+    const isCloudinary = imageUrl.includes('res.cloudinary.com') || imageUrl.includes('https://') || imageUrl.includes('http://');
+    const isLocal = imageUrl.startsWith('/uploads/');
+    
+    let fileExists = false;
+    if (isLocal) {
+      const filePath = path.join(__dirname, '..', 'public', imageUrl);
+      fileExists = fs.existsSync(filePath);
+    }
+    
+    return res.json({
+      listing: {
+        id: listing._id,
+        title: listing.title,
+        owner: listing.owner?._id
+      },
+      image: {
+        url: imageUrl,
+        filename: listing.image?.filename || 'NO FILENAME',
+        isCloudinary: isCloudinary,
+        isLocal: isLocal,
+        fileExistsLocally: fileExists,
+        urlStarts: imageUrl.substring(0, 80)
+      },
+      cloudinary_env_set: !!process.env.CLOUD_NAME
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;
