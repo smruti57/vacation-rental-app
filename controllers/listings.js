@@ -197,13 +197,6 @@ module.exports.createListing = async(req,res,next)=>{
         console.log(`  | ID: ${savedListing._id}`);
         console.log(`  | Image URL in DB: ${savedListing.image.url}`);
         console.log(`  | Image filename: ${savedListing.image.filename}\n`);
-        newListing.owner = req.user._id;
-        newListing.image = { url, filename };
-        newListing.geometry = geojsonPoint;
-        newListing.category = req.body.listing.category;
-        
-        let savedListing = await newListing.save();
-        console.log('New listing created:', savedListing._id);
         req.flash("success", "New Listing Created!");
         res.redirect("/listings");
     } catch (err) {
