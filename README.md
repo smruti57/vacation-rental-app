@@ -147,7 +147,7 @@ Create a `.env` file in the root directory:
 
 ```bash
 # Database
-ATLAS_URL=mongodb+srv://username:password@cluster0.xxxxx.mongodb.net/wanderlust?retryWrites=true&w=majority
+mongodb+srv://username:password@cluster0.xxxxx.mongodb.net/wanderlust?retryWrites=true&w=majority
 
 # Session
 SESSION_SECRET=your_super_secret_session_key_here_make_it_long_and_random
