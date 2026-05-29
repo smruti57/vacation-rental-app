@@ -400,7 +400,7 @@ PORT=3001 npm run dev
 
 <div align="center">
 
-Made with ❤️ by [Your Name](https://github.com/yourusername)
+Made with ❤️ by smruti(https://github.com/smruti57)
 
 [⬆ Back to Top](#-wanderlust---listing--review-platform)
 
